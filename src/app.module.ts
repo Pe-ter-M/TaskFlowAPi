@@ -3,6 +3,7 @@ import { AuthModule } from './auth/auth.module';
 // import { LoggerModule } from './logger/logger.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ConfigModule } from '@nestjs/config';
     }),
     DatabaseModule.forRoot(),
     AuthModule,
+    UsersModule,
    ],
   controllers: [],
   providers: [],
