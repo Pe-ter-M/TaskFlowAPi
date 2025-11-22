@@ -87,7 +87,7 @@ export class AuthSession {
         this.lastFailedLogin = new Date();
 
         // Lock after 5 failed attempts for 30 minutes
-        if (this.failedLoginAttempts >= 5) {
+        if (this.failedLoginAttempts >= 4) {
             const lockTime = new Date();
             lockTime.setMinutes(lockTime.getMinutes() + 30);
             this.lockUntil = lockTime;
