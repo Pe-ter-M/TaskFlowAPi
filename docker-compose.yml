@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nest_postgres
+    environment:
+      POSTGRES_DB: nest_auth
+      POSTGRES_USER: nest_user
+      POSTGRES_PASSWORD: nest_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nest_network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: nest_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    networks:
+      - nest_network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+
+networks:
+  nest_network:
+    driver: bridge
