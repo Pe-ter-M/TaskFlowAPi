@@ -7,8 +7,10 @@ import { User } from 'src/users/entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Password } from './entities/password.entity';
 import { AuthSession } from './entities/auth.entity';
-import {v4 as uuid4} from 'uuid';
+import { v4 as uuid4 } from 'uuid';
 import { AuthToken, TokenType } from './entities/auth-token.entity';
+import { LoginDto } from './dto/login.dto';
+import { ConflictException, UnauthorizedException } from 'src/util/exceptions.index';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +34,7 @@ export class AuthService {
 
   ) { }
   async create(createAuthDto: CreateAuthDto) {
+    // register new user with transaction
     this.logger.info(`CreateAuthDto: ${JSON.stringify(createAuthDto)}`);
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -45,7 +48,8 @@ export class AuthService {
       })
       if (existingUser) {
         this.logger.warn(`User with email ${createAuthDto.email} already exists`);
-        throw new Error('User already exists');
+        throw new ConflictException('User with this email already exists');
+
       }
 
       // Create User
@@ -113,6 +117,43 @@ export class AuthService {
       await queryRunner.release();
     }
 
+  }
+
+  async login(loginDto: LoginDto) {
+    this.logger.info(`Login attempt for email: ${loginDto.email}`);
+
+    const user = await this.userRepository.findOne({
+      where: { email: loginDto.email },
+    })
+    if (!user) {
+      this.logger.warn(`Login failed: User with email ${loginDto.email} not found`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const passwordRecord = await this.passwordRepository.findOne({
+      where: { user_id: user.id },
+    });
+
+    if (!passwordRecord) {
+      this.logger.warn(`Login failed: No password record found for email ${loginDto.email}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!await passwordRecord.validatePassword(loginDto.password)) {
+      this.logger.warn(`Login failed: Invalid password for email ${loginDto.email}`);
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    this.logger.info(`Login successful for email: ${loginDto.email}`);
+    return {
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        role: user.role,
+      }
+    };
   }
 
   findAll() {

@@ -6,6 +6,7 @@ import { DatabaseModule } from 'src/database/database.module';
 import { Password } from './entities/password.entity';
 import { User } from 'src/users/entities/user.entity';
 import { AuthSession } from './entities/auth.entity';
+import { AuthToken } from './entities/auth-token.entity';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { AuthSession } from './entities/auth.entity';
       maxFiles: 5,
       logFormat: 'text',
     }),
-    DatabaseModule.forFeature([User, Password, AuthSession])
+    DatabaseModule.forFeature([User, Password, AuthSession, AuthToken]),
   ],
   controllers: [AuthController],
   providers: [AuthService],

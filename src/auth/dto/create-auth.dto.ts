@@ -30,7 +30,7 @@ export class CreateAuthDto {
 
     @IsString()
     @IsNotEmpty()
-    @MinLength(2)
+    @MinLength(2, { message: 'First name must be at least 2 characters long' })
     @MaxLength(100)
     @Matches(/^[a-zA-Z\s]+$/, { message: 'First name can only contain letters and spaces' })
     first_name: string;

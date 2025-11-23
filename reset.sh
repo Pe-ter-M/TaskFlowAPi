@@ -1,31 +1,41 @@
 #!/bin/bash
 
-echo "=== COMPLETE POSTGRESQL FRESH RESET ==="
+# Reset PostgreSQL Database Script
 
-echo "1. Stopping and removing all containers..."
-sudo docker-compose down
+echo "Resetting PostgreSQL database..."
 
-echo "2. Removing PostgreSQL data volume..."
-sudo docker volume rm taskflowapipostgres_data 2>/dev/null || echo "Volume already removed or doesn't exist"
+# Get the PostgreSQL container ID
+CONTAINER_ID=$(docker ps -qf "name=nest_postgres")
 
-echo "3. Removing the network..."
-sudo docker network rm taskflowapinest_network 2>/dev/null || echo "Network already removed or doesn't exist"
+if [ -z "$CONTAINER_ID" ]; then
+    echo "Error: PostgreSQL container not found. Is it running?"
+    exit 1
+fi
 
-echo "4. Starting fresh PostgreSQL instance..."
-sudo docker-compose up -d postgres
+echo "Found PostgreSQL container: $CONTAINER_ID"
 
-echo "5. Waiting for PostgreSQL to initialize..."
-sleep 4
+# Connect to the container and execute SQL commands
+docker exec -i $CONTAINER_ID psql -U nest_user -d postgres << EOF
+-- Terminate all connections to the database
+SELECT pg_terminate_backend(pid) 
+FROM pg_stat_activity 
+WHERE datname = 'nest_auth' AND pid <> pg_backend_pid();
 
-echo "6. Verifying PostgreSQL is ready..."
-until sudo docker exec nest_postgres pg_isready -U nest_user -d nest_auth; do
-    echo "Waiting for PostgreSQL to be ready..."
-    sleep 2
-done
+-- Drop the database if it exists
+DROP DATABASE IF EXISTS nest_auth;
 
-echo "=== RESET COMPLETE ==="
-echo "PostgreSQL is now fresh and empty:"
-echo "- Database: nest_auth"
-echo "- User: nest_user"
-echo "- All tables: EMPTY"
-echo "- Ready for TypeORM migrations"
+-- Create a new database
+CREATE DATABASE nest_auth WITH OWNER nest_user;
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE nest_auth TO nest_user;
+EOF
+
+# Check if the commands were successful
+if [ $? -eq 0 ]; then
+    echo "✅ Database reset successfully!"
+    echo "Database 'nest_auth' has been dropped and recreated."
+else
+    echo "❌ Error resetting database"
+    exit 1
+fi

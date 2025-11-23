@@ -6,7 +6,7 @@ export class Password {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ name: 'user_id', type: 'uuid' })
+    @Column({ name: 'user_id', type: 'uuid', unique: true, nullable:false })
     user_id: string;
 
     @Column({ name: 'user_password', type: 'varchar' })
@@ -37,7 +37,8 @@ export class Password {
     }
 
     async validatePassword(plainPassword: string): Promise<boolean> {
-        return await bcrypt.compare(plainPassword, this.password);
+        const valide_password = await bcrypt.compare(plainPassword, this.password);
+        return valide_password;
     }
 
 }
