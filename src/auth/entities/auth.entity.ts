@@ -15,22 +15,18 @@ export class AuthSession {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ name: 'user_id', type: 'uuid' })
-    @Index()
-    userId: string;
-
     // Login tracking
     @Column({ name: 'last_login', type: 'timestamp', nullable: true })
     lastLogin: Date | null;
 
-    @Column({ name: 'last_login_ip', nullable: true })
+    @Column({ name: 'last_login_ip', nullable: true, type: 'varchar', length: 45 })
     lastLoginIp: string | null;
 
-    @Column({ name: 'last_login_user_agent', nullable: true })
+    @Column({ name: 'last_login_user_agent', nullable: true, type: 'varchar', length: 512 })
     lastLoginUserAgent: string | null;
 
     // Failed attempts tracking
-    @Column({ name: 'failed_login_attempts', default: 0 })
+    @Column({ name: 'failed_login_attempts', default: 0,type: 'int' })
     failedLoginAttempts: number;
 
     @Column({ name: 'last_failed_login', type: 'timestamp', nullable: true })
@@ -40,20 +36,20 @@ export class AuthSession {
     lockUntil: Date | null;
 
     // Session activity
-    @Column({ name: 'is_online', default: false })
+    @Column({ name: 'is_online', default: false , type: 'boolean'})
     isOnline: boolean;
 
     @Column({ name: 'last_activity', type: 'timestamp', nullable: true })
     lastActivity: Date | null;
 
     // Device/browser info
-    @Column({ name: 'device_type', nullable: true })
+    @Column({ name: 'device_type', nullable: true, type: 'varchar' })
     deviceType: string | null; // 'mobile', 'tablet', 'desktop'
 
-    @Column({ name: 'browser', nullable: true })
+    @Column({ name: 'browser', nullable: true, type: 'varchar' })
     browser: string | null;
 
-    @Column({ name: 'os', nullable: true })
+    @Column({ name: 'os', nullable: true, type: 'varchar' })
     os: string | null;
 
     @CreateDateColumn({ name: 'created_at' })

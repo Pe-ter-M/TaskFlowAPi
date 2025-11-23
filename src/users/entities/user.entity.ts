@@ -26,9 +26,6 @@ export class User {
     updated_at: Date;
 
     // relations here
-    @OneToOne(() => Password, password => password.user)
-    auth: Password;
-
     @OneToMany(() => AuthSession, (session) => session.user)
     authSessions: AuthSession[];
 

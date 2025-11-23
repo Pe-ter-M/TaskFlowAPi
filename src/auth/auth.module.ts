@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { LoggerModule } from '../logger/logger.module';
+import { DatabaseModule } from 'src/database/database.module';
+import { Password } from './entities/password.entity';
+import { User } from 'src/users/entities/user.entity';
+import { AuthSession } from './entities/auth.entity';
 
 @Module({
   imports: [
@@ -16,7 +20,8 @@ import { LoggerModule } from '../logger/logger.module';
       maxFileSize: '10m',
       maxFiles: 5,
       logFormat: 'text',
-    })
+    }),
+    DatabaseModule.forFeature([User, Password, AuthSession])
   ],
   controllers: [AuthController],
   providers: [AuthService],
