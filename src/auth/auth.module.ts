@@ -9,6 +9,8 @@ import { AuthSession } from './entities/auth.entity';
 import { AuthToken } from './entities/auth-token.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RolesGuard } from './roles.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     DatabaseModule.forFeature([User, Password, AuthSession, AuthToken]),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtAuthGuard, RolesGuard],
+  exports: [JwtModule,JwtAuthGuard,RolesGuard],
 })
 export class AuthModule {}
