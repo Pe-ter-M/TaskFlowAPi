@@ -11,6 +11,7 @@ import { v4 as uuid4 } from 'uuid';
 import { AuthToken, TokenType } from './entities/auth-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { ConflictException, UnauthorizedException } from 'src/util/exceptions.index';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +32,8 @@ export class AuthService {
     private authTokenRepository: Repository<AuthToken>,
 
     private dataSource: DataSource,
+    
+    private readonly jwtService: JwtService,
 
   ) { }
   async create(createAuthDto: CreateAuthDto) {
@@ -49,7 +52,6 @@ export class AuthService {
       if (existingUser) {
         this.logger.warn(`User with email ${createAuthDto.email} already exists`);
         throw new ConflictException('User with this email already exists');
-
       }
 
       // Create User
@@ -64,13 +66,12 @@ export class AuthService {
       this.logger.debug(`New user created with ID: ${saved_user.id}`);
 
       // Create Password
-      this.logger.debug('Creating Password entity...');
       const new_password = queryRunner.manager.create(Password, {
         password: createAuthDto.password,
         user_id: saved_user.id,
       });
       await queryRunner.manager.save(new_password);
-      this.logger.debug(`Password set for user ID: ${saved_user.id}`);
+      this.logger.debug(`Password set for user: ${saved_user.email}`);
 
       // Step 3: Create initial AuthSession
       const authSession = queryRunner.manager.create(AuthSession, {
@@ -81,7 +82,7 @@ export class AuthService {
       });
 
       await queryRunner.manager.save(authSession);
-      this.logger.debug(`Auth session created for user: ${saved_user.id}`, 'AuthService.create');
+      this.logger.debug(`Auth session created for user: ${saved_user.email}`, 'AuthService.create');
 
       const authToken = queryRunner.manager.create(AuthToken, {
         userId: saved_user.id,
@@ -143,33 +144,20 @@ export class AuthService {
       this.logger.warn(`Login failed: Invalid password for email ${loginDto.email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
+    const payload = { 
+      role: user.role, 
+      sub: user.id, 
+      email: user.email
+    };
+    const token = this.jwtService.sign(payload);
     this.logger.info(`Login successful for email: ${loginDto.email}`);
     return {
-      message: 'Login successful',
-      user: {
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
         role: user.role,
-      }
+        token
     };
-  }
-
-  findAll() {
-    this.logger.debug('Fetching all auth records');
-    return `This action returns all auth`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
-
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
   }
 }

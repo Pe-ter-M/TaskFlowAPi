@@ -7,6 +7,8 @@ import { Password } from './entities/password.entity';
 import { User } from 'src/users/entities/user.entity';
 import { AuthSession } from './entities/auth.entity';
 import { AuthToken } from './entities/auth-token.entity';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -21,6 +23,14 @@ import { AuthToken } from './entities/auth-token.entity';
       maxFileSize: '10m',
       maxFiles: 5,
       logFormat: 'text',
+    }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
+      inject: [ConfigService],
     }),
     DatabaseModule.forFeature([User, Password, AuthSession, AuthToken]),
   ],

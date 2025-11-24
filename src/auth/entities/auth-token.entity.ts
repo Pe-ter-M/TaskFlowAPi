@@ -4,7 +4,6 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -43,18 +42,6 @@ export class AuthToken {
 
   @Column({ name: 'revoked_at', type: 'timestamp', nullable: true })
   revokedAt: Date | null;
-
-  @Column({ name: 'ip_address', nullable: true, type: 'varchar' })
-  ipAddress: string | null;
-
-  @Column({ name: 'user_agent', nullable: true, type: 'varchar' })
-  userAgent: string | null;
-
-  @Column({ type: 'jsonb', nullable: true })
-  metadata: any; // For additional data like scope, permissions, etc.
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 
   // Relations
   @ManyToOne(() => User, (user) => user.authTokens, { onDelete: 'CASCADE' })

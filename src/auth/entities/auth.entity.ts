@@ -35,13 +35,6 @@ export class AuthSession {
     @Column({ name: 'lock_until', type: 'timestamp', nullable: true })
     lockUntil: Date | null;
 
-    // Session activity
-    @Column({ name: 'is_online', default: false , type: 'boolean'})
-    isOnline: boolean;
-
-    @Column({ name: 'last_activity', type: 'timestamp', nullable: true })
-    lastActivity: Date | null;
-
     // Device/browser info
     @Column({ name: 'device_type', nullable: true, type: 'varchar' })
     deviceType: string | null; // 'mobile', 'tablet', 'desktop'
@@ -74,8 +67,6 @@ export class AuthSession {
         if(userAgent)this.lastLoginUserAgent = userAgent;
         this.failedLoginAttempts = 0;
         this.lockUntil = null;
-        this.isOnline = true;
-        this.lastActivity = new Date();
     }
 
     recordFailedLogin(): void {
@@ -88,15 +79,6 @@ export class AuthSession {
             lockTime.setMinutes(lockTime.getMinutes() + 30);
             this.lockUntil = lockTime;
         }
-    }
-
-    recordActivity(): void {
-        this.lastActivity = new Date();
-        this.isOnline = true;
-    }
-
-    logout(): void {
-        this.isOnline = false;
     }
 
     // Device info parsing
