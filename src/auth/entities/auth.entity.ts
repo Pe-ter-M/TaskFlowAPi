@@ -7,7 +7,6 @@ import {
     JoinColumn,
     CreateDateColumn,
     UpdateDateColumn,
-    Index,
 } from 'typeorm';
 
 @Entity('auth_sessions')

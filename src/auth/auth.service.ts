@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { LoggerService } from 'src/logger/logger.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
@@ -12,7 +11,8 @@ import { AuthToken, TokenType } from './entities/auth-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { ConflictException, UnauthorizedException } from 'src/util/exceptions.index';
 import { JwtService } from '@nestjs/jwt';
-
+import { ClientInfoService } from 'src/util/client-info';
+import type { Request } from 'express';
 @Injectable()
 export class AuthService {
   constructor(
@@ -31,8 +31,9 @@ export class AuthService {
     @InjectRepository(AuthToken)
     private authTokenRepository: Repository<AuthToken>,
 
-    private dataSource: DataSource,
-    
+    private readonly dataSource: DataSource,
+    private readonly clientInfoService: ClientInfoService,
+
     private readonly jwtService: JwtService,
 
   ) { }
@@ -120,7 +121,10 @@ export class AuthService {
 
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, req: Request) {
+    const clientInfo = this.clientInfoService.extractFromRequest(req);
+    this.logger.info(`Login from: ${clientInfo.ip}, Browser: ${clientInfo.browser.name}, OS: ${clientInfo.os.name}`);
+
     this.logger.info(`Login attempt for email: ${loginDto.email}`);
 
     const user = await this.userRepository.findOne({
@@ -144,20 +148,26 @@ export class AuthService {
       this.logger.warn(`Login failed: Invalid password for email ${loginDto.email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
-    const payload = { 
-      role: user.role, 
-      sub: user.id, 
+    const payload = {
+      role: user.role,
+      sub: user.id,
       email: user.email
     };
     const token = this.jwtService.sign(payload);
     this.logger.info(`Login successful for email: ${loginDto.email}`);
     return {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        role: user.role,
-        token
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      role: user.role,
+      token
     };
+  }
+
+  get(req:Request){
+    const clientInfo = this.clientInfoService.extractFromRequest(req)
+    this.logger.info(`Login from: ${clientInfo.ip}, Device: ${clientInfo.device.full}, Browser: ${clientInfo.browser.full}, OS: ${clientInfo.os.full}`);
+    return 'done'
   }
 }
