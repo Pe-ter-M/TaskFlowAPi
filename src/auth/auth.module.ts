@@ -6,7 +6,6 @@ import { DatabaseModule } from 'src/database/database.module';
 import { Password } from './entities/password.entity';
 import { User } from 'src/users/entities/user.entity';
 import { AuthSecurity } from './entities/auth.entity';
-import { AuthToken } from './entities/auth-token.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesGuard } from './roles.guard';
@@ -35,7 +34,7 @@ import { ClientInfoService } from 'src/util/client-info';
       }),
       inject: [ConfigService],
     }),
-    DatabaseModule.forFeature([User, Password, AuthSecurity, AuthToken]),
+    DatabaseModule.forFeature([User, Password, AuthSecurity]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtAuthGuard, RolesGuard, ClientInfoService],

@@ -1,7 +1,5 @@
-import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Password } from '../../auth/entities/password.entity';
+import { Column, Entity,  OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { AuthSecurity } from 'src/auth/entities/auth.entity';
-import { AuthToken } from 'src/auth/entities/auth-token.entity';
 @Entity('users')
 export class User {
     @PrimaryGeneratedColumn('uuid')
@@ -26,11 +24,7 @@ export class User {
     updated_at: Date;
 
     // relations here
-    @OneToMany(() => AuthSecurity, (session) => session.user)
-    authSessions: AuthSecurity[];
-
-    @OneToMany(() => AuthToken,
-        (token) => token.user)
-    authTokens: AuthToken[];
+    @OneToOne(() => AuthSecurity, (session) => session.user)
+    authSecurity: AuthSecurity;
 
 }

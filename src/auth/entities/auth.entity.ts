@@ -3,18 +3,18 @@ import {
     Entity,
     Column,
     PrimaryGeneratedColumn,
-    ManyToOne,
     JoinColumn,
     CreateDateColumn,
     UpdateDateColumn,
     BeforeUpdate,
+    OneToOne,
 } from 'typeorm';
 
 @Entity('auth_sessions')
 export class AuthSecurity {
     // Configuration variables (easily adjustable)
-    private static  MAX_FAILED_ATTEMPTS = 4;
-    private static  LOCK_DURATION_MINUTES = 2;
+    private static MAX_FAILED_ATTEMPTS = 4;
+    private static LOCK_DURATION_MINUTES = 2;
 
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -56,8 +56,10 @@ export class AuthSecurity {
     updatedAt: Date;
 
     // Relations
-    @ManyToOne(() => User, (user) => user.authSessions, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'user_id' })
+    @OneToOne(() => User, (user) => user.authSecurity, {
+        onDelete: 'CASCADE', // Delete authSecurity when user is deleted
+    })
+    @JoinColumn({ name: 'user_id' }) // Foreign key in auth_sessions table
     user: User;
 
     // Methods
@@ -70,7 +72,7 @@ export class AuthSecurity {
         // Increment failed attempts
         this.failedLoginAttempts += 1;
         this.lastFailedLogin = new Date();
-        
+
         // Update IP and user agent if provided
         if (ip) {
             this.lastLoginIp = ip;
@@ -78,7 +80,7 @@ export class AuthSecurity {
         if (userAgent) {
             this.lastLoginUserAgent = userAgent;
         }
-        
+
         // Check if account should be locked
         if (this.failedLoginAttempts >= AuthSecurity.MAX_FAILED_ATTEMPTS) {
             this.lockAccount();
@@ -94,19 +96,19 @@ export class AuthSecurity {
         this.failedLoginAttempts = 0;
         this.lockUntil = null;
         this.lastFailedLogin = null;
-        
+
         // Update login info
         this.lastLogin = new Date();
-        
+
         if (ip) {
             this.lastLoginIp = ip;
             console.log('update')
         }
-        
+
         if (userAgent) {
             this.lastLoginUserAgent = userAgent;
         }
-        
+
         // Update device info if provided
         if (deviceInfo) {
             if (deviceInfo.browser) {
@@ -145,13 +147,13 @@ export class AuthSecurity {
         if (!this.lockUntil) {
             return false;
         }
-        
+
         // If lock has expired, auto-unlock
         if (this.lockUntil < new Date()) {
             this.unlockAccount();
             return false;
         }
-        
+
         return true;
     }
 
@@ -162,12 +164,12 @@ export class AuthSecurity {
         if (!this.lockUntil) {
             return 0;
         }
-        
+
         const now = new Date();
         if (this.lockUntil <= now) {
             return 0;
         }
-        
+
         const remainingMs = this.lockUntil.getTime() - now.getTime();
         return Math.ceil(remainingMs / (60 * 1000));
     }

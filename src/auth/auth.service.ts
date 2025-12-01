@@ -5,8 +5,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Password } from './entities/password.entity';
-import { v4 as uuid4 } from 'uuid';
-import { AuthToken, TokenType } from './entities/auth-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { ConflictException, ForbiddenException, UnauthorizedException } from 'src/util/exceptions.index';
 import { JwtService } from '@nestjs/jwt';
@@ -27,9 +25,6 @@ export class AuthService {
 
     @InjectRepository(AuthSecurity)
     private readonly authSecurityRepository: Repository<AuthSecurity>,
-
-    @InjectRepository(AuthToken)
-    private authTokenRepository: Repository<AuthToken>,
 
     private readonly dataSource: DataSource,
     private readonly clientInfoService: ClientInfoService,
@@ -79,26 +74,10 @@ export class AuthService {
         user: saved_user,
         lastLogin: null,
         failedLoginAttempts: 0,
-        isOnline: false,
       });
 
       await queryRunner.manager.save(authSession);
       this.logger.debug(`Auth session created for user: ${saved_user.email}`, 'AuthService.create');
-
-      const authToken = queryRunner.manager.create(AuthToken, {
-        userId: saved_user.id,
-        type: TokenType.EMAIL_VERIFICATION,
-        tokenHash: uuid4(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-        revoked: false,
-        revokedAt: null,
-        ipAddress: null,
-        userAgent: null,
-        metadata: { purpose: 'Verify email address' },
-      });
-
-      await queryRunner.manager.save(authToken);
-      this.logger.debug(`Email verification token created for user: ${saved_user.id}`, 'AuthService.create');
 
       // commit transaction
       await queryRunner.commitTransaction();
@@ -194,9 +173,4 @@ export class AuthService {
     };
   }
 
-  get(req: Request) {
-    const clientInfo = this.clientInfoService.extractFromRequest(req)
-    this.logger.info(`Login from: ${clientInfo.ip}, Device: ${clientInfo.device.full}, Browser: ${clientInfo.browser.full}, OS: ${clientInfo.os.full}`);
-    return 'done'
-  }
 }

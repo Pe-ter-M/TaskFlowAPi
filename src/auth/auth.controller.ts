@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Req, Get } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Req, } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Request } from 'express';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -39,8 +39,4 @@ export class AuthController {
     return this.authService.login(loginDto,req);
   }
 
-  @Get()
-  get_Requwest(@Req() req: Request){
-    return this.authService.get(req)
-  }
 }
