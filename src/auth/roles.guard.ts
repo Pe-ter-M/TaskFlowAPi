@@ -1,5 +1,5 @@
 // roles.guard.ts
-import { Injectable, CanActivate, ExecutionContext  } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { ROLES_KEY } from './ roles.decorator';
@@ -8,9 +8,9 @@ import { ForbiddenException } from 'src/util/exceptions.index';
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
-    private reflector: Reflector,
-    private jwtService: JwtService,
-  ) {}
+    private readonly reflector: Reflector,
+    private readonly jwtService: JwtService,
+  ) { }
 
   canActivate(context: ExecutionContext): boolean {
     // Get the required roles from the decorator
@@ -32,7 +32,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const token = authHeader.split(' ')[1]; // Bearer <token>
-    
+
     try {
       // Verify and decode the JWT
       const payload = this.jwtService.verify(token);
@@ -40,7 +40,7 @@ export class RolesGuard implements CanActivate {
 
       // Check if user has any of the required roles
       const hasRole = requiredRoles.some(role => payload.roles?.includes(role));
-      
+
       if (!hasRole) {
         throw new ForbiddenException('Insufficient permissions');
       }

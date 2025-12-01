@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(private readonly jwtService: JwtService) { }
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
@@ -15,13 +15,13 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const token = authHeader.split(' ')[1];
-    
+
     try {
       const payload = this.jwtService.verify(token);
       request.user = payload;
       return true;
-    } catch (error) {
-      throw new UnauthorizedException('Invalid token');
+    } catch (err: any) {
+      throw new UnauthorizedException(`Invalid token ${err?.message}`);
     }
   }
 }

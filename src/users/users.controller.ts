@@ -2,16 +2,16 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@n
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-// import { RolesGuard } from 'src/auth/roles.guard';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { RolesGuard } from 'src/auth/roles.guard';
 import { Roles } from 'src/auth/ roles.decorator';
 import { UserRole } from './entities/type';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
 
 
 @Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
@@ -19,7 +19,6 @@ export class UsersController {
   }
 
   @Get()
-  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
   findAll() {
     return this.usersService.findAll();
