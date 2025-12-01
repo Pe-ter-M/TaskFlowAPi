@@ -1,0 +1,4 @@
+@url = http://localhost:3000/users
+
+GET {{url}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoidXNlciIsInN1YiI6ImRiZDY1NzM5LWM4MjgtNGE1Zi04OThlLWJjMmRlM2VhNWQ2YSIsImVtYWlsIjoibWJ1cnU4NTI2QGdtYWlsLmNvbSIsImlhdCI6MTc2NDU4NjE2MSwiZXhwIjoxNzY0NTg5NzYxfQ.13InWvtZU1wI8yJ3e9Bu-Yf2pbdn29J-NSegL220tLU
