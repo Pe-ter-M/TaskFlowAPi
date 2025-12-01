@@ -5,14 +5,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { Password } from './entities/password.entity';
-import { AuthSession } from './entities/auth.entity';
 import { v4 as uuid4 } from 'uuid';
 import { AuthToken, TokenType } from './entities/auth-token.entity';
 import { LoginDto } from './dto/login.dto';
-import { ConflictException, UnauthorizedException } from 'src/util/exceptions.index';
+import { ConflictException, ForbiddenException, UnauthorizedException } from 'src/util/exceptions.index';
 import { JwtService } from '@nestjs/jwt';
 import { ClientInfoService } from 'src/util/client-info';
 import type { Request } from 'express';
+import { AuthSecurity } from './entities/auth.entity';
 @Injectable()
 export class AuthService {
   constructor(
@@ -25,8 +25,8 @@ export class AuthService {
     @InjectRepository(Password)
     private readonly passwordRepository: Repository<Password>,
 
-    @InjectRepository(AuthSession)
-    private authSessionRepository: Repository<AuthSession>,
+    @InjectRepository(AuthSecurity)
+    private readonly authSecurityRepository: Repository<AuthSecurity>,
 
     @InjectRepository(AuthToken)
     private authTokenRepository: Repository<AuthToken>,
@@ -75,7 +75,7 @@ export class AuthService {
       this.logger.debug(`Password set for user: ${saved_user.email}`);
 
       // Step 3: Create initial AuthSession
-      const authSession = queryRunner.manager.create(AuthSession, {
+      const authSession = queryRunner.manager.create(AuthSecurity, {
         user: saved_user,
         lastLogin: null,
         failedLoginAttempts: 0,
@@ -139,14 +139,41 @@ export class AuthService {
       where: { user_id: user.id },
     });
 
+    let authSecurity = await this.authSecurityRepository.findOne({
+      where: { user: { id: user.id } },
+    })
+
+    if (!authSecurity) {
+      authSecurity = this.authSecurityRepository.create({ user });
+      await this.authSecurityRepository.save(authSecurity);
+    }
+
+    // check if account is locked
+    if (authSecurity.isLocked()) {
+      const remainingTime = authSecurity.getRemainingLockTime();
+      throw new ForbiddenException(
+        `Account is locked. Please try again in ${remainingTime} minutes.`
+      );
+    }
+
     if (!passwordRecord) {
       this.logger.warn(`Login failed: No password record found for email ${loginDto.email}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
     if (!await passwordRecord.validatePassword(loginDto.password)) {
+      // for wrong password
       this.logger.warn(`Login failed: Invalid password for email ${loginDto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      authSecurity.recordFailedAttempt(clientInfo.ip,clientInfo.userAgent)
+      const remainingAttempts = authSecurity.getRemainingAttempts();
+      const remainingTime = authSecurity.getRemainingLockTime()
+      await this.authSecurityRepository.save(authSecurity);
+      if (remainingAttempts <= 0) {
+        throw new ForbiddenException(
+          `Account locked due to too many failed attempts. Please try again in ${remainingTime} minutes.`
+        );
+      }
+      throw new UnauthorizedException(`Invalid credentials. ${remainingAttempts} attempt(s) remaining.`);
     }
     const payload = {
       role: user.role,
@@ -154,7 +181,9 @@ export class AuthService {
       email: user.email
     };
     const token = this.jwtService.sign(payload);
+    authSecurity.recordSuccessfulLogin(clientInfo.ip, clientInfo.userAgent, { browser: clientInfo.browser.full, os: clientInfo.os.full, deviceType: clientInfo.device.full })
     this.logger.info(`Login successful for email: ${loginDto.email}`);
+    await this.authSecurityRepository.save(authSecurity)
     return {
       id: user.id,
       first_name: user.first_name,
@@ -165,7 +194,7 @@ export class AuthService {
     };
   }
 
-  get(req:Request){
+  get(req: Request) {
     const clientInfo = this.clientInfoService.extractFromRequest(req)
     this.logger.info(`Login from: ${clientInfo.ip}, Device: ${clientInfo.device.full}, Browser: ${clientInfo.browser.full}, OS: ${clientInfo.os.full}`);
     return 'done'

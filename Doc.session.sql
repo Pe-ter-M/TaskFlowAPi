@@ -1,2 +1,2 @@
 SELECT *
-FROM users;
+FROM auth_sessions;

@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Password } from '../../auth/entities/password.entity';
-import { AuthSession } from 'src/auth/entities/auth.entity';
+import { AuthSecurity } from 'src/auth/entities/auth.entity';
 import { AuthToken } from 'src/auth/entities/auth-token.entity';
 @Entity('users')
 export class User {
@@ -26,8 +26,8 @@ export class User {
     updated_at: Date;
 
     // relations here
-    @OneToMany(() => AuthSession, (session) => session.user)
-    authSessions: AuthSession[];
+    @OneToMany(() => AuthSecurity, (session) => session.user)
+    authSessions: AuthSecurity[];
 
     @OneToMany(() => AuthToken,
         (token) => token.user)

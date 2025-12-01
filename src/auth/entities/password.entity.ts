@@ -1,5 +1,4 @@
 import { BeforeInsert, BeforeUpdate, Column, CreateDateColumn, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 @Entity('password')
 export class Password {

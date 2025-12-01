@@ -7,10 +7,15 @@ import {
     JoinColumn,
     CreateDateColumn,
     UpdateDateColumn,
+    BeforeUpdate,
 } from 'typeorm';
 
 @Entity('auth_sessions')
-export class AuthSession {
+export class AuthSecurity {
+    // Configuration variables (easily adjustable)
+    private static  MAX_FAILED_ATTEMPTS = 4;
+    private static  LOCK_DURATION_MINUTES = 2;
+
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
@@ -25,7 +30,7 @@ export class AuthSession {
     lastLoginUserAgent: string | null;
 
     // Failed attempts tracking
-    @Column({ name: 'failed_login_attempts', default: 0,type: 'int' })
+    @Column({ name: 'failed_login_attempts', default: 0, type: 'int' })
     failedLoginAttempts: number;
 
     @Column({ name: 'last_failed_login', type: 'timestamp', nullable: true })
@@ -55,52 +60,160 @@ export class AuthSession {
     @JoinColumn({ name: 'user_id' })
     user: User;
 
-    // Security methods
-    isLocked(): boolean {
-        return this.lockUntil ? this.lockUntil > new Date() : false;
-    }
+    // Methods
 
-    recordSuccessfulLogin(ip?: string, userAgent?: string): void {
-        this.lastLogin = new Date();
-        if (ip)this.lastLoginIp = ip;
-        if(userAgent)this.lastLoginUserAgent = userAgent;
-        this.failedLoginAttempts = 0;
-        this.lockUntil = null;
-    }
-
-    recordFailedLogin(): void {
+    /**
+     * Records a failed login attempt
+     * Increments counter and locks account if threshold is reached
+     */
+    recordFailedAttempt(ip?: string, userAgent?: string): void {
+        // Increment failed attempts
         this.failedLoginAttempts += 1;
         this.lastFailedLogin = new Date();
-
-        // Lock after 5 failed attempts for 30 minutes
-        if (this.failedLoginAttempts >= 4) {
-            const lockTime = new Date();
-            lockTime.setMinutes(lockTime.getMinutes() + 30);
-            this.lockUntil = lockTime;
+        
+        // Update IP and user agent if provided
+        if (ip) {
+            this.lastLoginIp = ip;
+        }
+        if (userAgent) {
+            this.lastLoginUserAgent = userAgent;
+        }
+        
+        // Check if account should be locked
+        if (this.failedLoginAttempts >= AuthSecurity.MAX_FAILED_ATTEMPTS) {
+            this.lockAccount();
         }
     }
 
-    // Device info parsing
-    setDeviceInfo(userAgent: string): void {
-        // Simple parsing (in real app, use a library like ua-parser-js)
-        if (userAgent.includes('Mobile')) {
-            this.deviceType = 'mobile';
-        } else if (userAgent.includes('Tablet')) {
-            this.deviceType = 'tablet';
-        } else {
-            this.deviceType = 'desktop';
+    /**
+     * Records a successful login
+     * Resets failed attempts and updates login info
+     */
+    recordSuccessfulLogin(ip?: string, userAgent?: string, deviceInfo?: { browser?: string; os?: string; deviceType?: string }): void {
+        // Reset failed attempts
+        this.failedLoginAttempts = 0;
+        this.lockUntil = null;
+        this.lastFailedLogin = null;
+        
+        // Update login info
+        this.lastLogin = new Date();
+        
+        if (ip) {
+            this.lastLoginIp = ip;
+            console.log('update')
         }
+        
+        if (userAgent) {
+            this.lastLoginUserAgent = userAgent;
+        }
+        
+        // Update device info if provided
+        if (deviceInfo) {
+            if (deviceInfo.browser) {
+                this.browser = deviceInfo.browser;
+            }
+            if (deviceInfo.os) {
+                this.os = deviceInfo.os;
+            }
+            if (deviceInfo.deviceType) {
+                this.deviceType = deviceInfo.deviceType;
+            }
+        }
+    }
 
-        if (userAgent.includes('Chrome')) this.browser = 'Chrome';
-        else if (userAgent.includes('Firefox')) this.browser = 'Firefox';
-        else if (userAgent.includes('Safari')) this.browser = 'Safari';
-        else this.browser = 'Other';
+    /**
+     * Locks the account for the configured duration
+     */
+    lockAccount(): void {
+        const lockDurationMs = AuthSecurity.LOCK_DURATION_MINUTES * 60 * 1000;
+        this.lockUntil = new Date(Date.now() + lockDurationMs);
+    }
 
-        if (userAgent.includes('Windows')) this.os = 'Windows';
-        else if (userAgent.includes('Mac')) this.os = 'macOS';
-        else if (userAgent.includes('Linux')) this.os = 'Linux';
-        else if (userAgent.includes('Android')) this.os = 'Android';
-        else if (userAgent.includes('iOS')) this.os = 'iOS';
-        else this.os = 'Unknown';
+    /**
+     * Manually unlocks the account
+     */
+    unlockAccount(): void {
+        this.failedLoginAttempts = 0;
+        this.lockUntil = null;
+        this.lastFailedLogin = null;
+    }
+
+    /**
+     * Checks if the account is currently locked
+     */
+    isLocked(): boolean {
+        if (!this.lockUntil) {
+            return false;
+        }
+        
+        // If lock has expired, auto-unlock
+        if (this.lockUntil < new Date()) {
+            this.unlockAccount();
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Gets the remaining lock time in minutes
+     */
+    getRemainingLockTime(): number {
+        if (!this.lockUntil) {
+            return 0;
+        }
+        
+        const now = new Date();
+        if (this.lockUntil <= now) {
+            return 0;
+        }
+        
+        const remainingMs = this.lockUntil.getTime() - now.getTime();
+        return Math.ceil(remainingMs / (60 * 1000));
+    }
+
+    /**
+     * Checks if the account can attempt login
+     * Returns true if not locked
+     */
+    canAttemptLogin(): boolean {
+        return !this.isLocked();
+    }
+
+    /**
+     * Gets the number of remaining attempts before lock
+     */
+    getRemainingAttempts(): number {
+        return Math.max(0, AuthSecurity.MAX_FAILED_ATTEMPTS - this.failedLoginAttempts);
+    }
+
+    /**
+     * Static method to get configuration
+     */
+    static getSecurityConfig() {
+        return {
+            maxFailedAttempts: AuthSecurity.MAX_FAILED_ATTEMPTS,
+            lockDurationMinutes: AuthSecurity.LOCK_DURATION_MINUTES,
+        };
+    }
+
+    /**
+     * Static method to update configuration (if needed)
+     */
+    static updateSecurityConfig(maxAttempts?: number, lockMinutes?: number) {
+        if (maxAttempts !== undefined) {
+            AuthSecurity.MAX_FAILED_ATTEMPTS = maxAttempts;
+        }
+        if (lockMinutes !== undefined) {
+            AuthSecurity.LOCK_DURATION_MINUTES = lockMinutes;
+        }
+    }
+
+    // Hook to auto-unlock expired locks before update
+    @BeforeUpdate()
+    checkLockExpiry() {
+        if (this.lockUntil && this.lockUntil < new Date()) {
+            this.unlockAccount();
+        }
     }
 }
