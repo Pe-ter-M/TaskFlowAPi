@@ -6,6 +6,8 @@ import { Roles } from 'src/auth/ roles.decorator';
 import { UserRole } from './entities/type';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { UserDec } from './UserDecorator';
+import { userInfo } from 'os';
 
 
 @Controller('users')
@@ -25,8 +27,8 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  findOne(@Param('id') id: string, @UserDec(['role','sub']) userInfo:{sub:string,role:string}) {
+    return this.usersService.findOne(id, userInfo);
   }
 
   @Patch(':id')
